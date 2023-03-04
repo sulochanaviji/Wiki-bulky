@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+</head>
+<body>
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <!--<div class="navbar-header">
+      <a class="navbar-brand" href="#">WebSiteName</a>
+    </div>-->
+    <ul class="nav navbar-nav">
+    <li><a href="/home"><span class="glyphicon glyphicon-user"></span>&nbsp;{{username_val}}</a></li>
+      <li><a href="/home">Home</a></li>
+      <li><a href="/media_download">Media Files Download</a></li>
+      <li class="active"><a href="/wiki_dict_upload">Wikitionary word add</a></li>
+      </ul>
+    <ul class="nav navbar-nav navbar-right">
+          <li><a href="/logout">
+          <span class="glyphicon glyphicon-log-out"></span> Logout
+        </a></li>
+        </ul>
+    
+    </div>
+    
+  </div>
+</nav>
+<div class="container mt-3">
+<form method="POST">
+    {% csrf_token %}
+    
+<div class="card bg-light text-dark">
+  <h5 class="card-header">Upload .csv file to add words in wikitionary:</h5>
+  <div class="card-body">
+    <input type="file" id="dict_file" name="dict_file">
+    
+  </div><br>
+  <div class="card-footer">
+      <button type="submit" class="btn btn-primary" name="dict_upload">Upload</button><div class="spinner-border"></div>
+  </div>
+  
+</div>
+    
+  </form>
+  <div>
+  <br>
+  {% if msg %}
+  <div class="alert alert-success">
+    <strong>Success!</strong> {{msg}}
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+  </div>
+  {% endif %}
+</div>
+<div class="container">
+  <br>
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item active">
+     <a class="nav-link active" data-toggle="tab" href="#home" aria-expanded="true">Recent changes</a>
+    </li>
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content">
+    <div id="home" class="container tab-pane active"><br>
+      <table class="table table-hover">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Command</th>
+      <th scope="col">Type</th>
+      <th scope="col">Tool</th>
+      <th scope="col">Created on</th>
+      <th scope="col">Created by</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for i in history_val_dict %}
+     
+    <tr>
+      <th scope="row">1</th>
+      <td>{{i.command}}</td>
+      <td>{{i.type}}</td>
+      <td>{{i.tool_type}}</td>
+      <td>{{i.created_on}}</td>
+      <td>{{i.created_by}}</td>
+    </tr>
+     {% endfor %}
+  </tbody>
+</table>
+
+      
+      
+        
+      
+      
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// Add the following code if you want the name of the file appear on select
+$(".custom-file-input").on("change", function() {
+  var fileName = $(this).val().split("\\").pop();
+  $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+});
+</script>
+
+</body>
+</html>
