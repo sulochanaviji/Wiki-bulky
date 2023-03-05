@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +10,7 @@
 </head>
 <body>
 
-<div class="container mt-3" style="padding-top:2%">
+<div class="container mt-1" style="padding-top:2%;width: 55%;">
   <form method="POST">
   {% csrf_token %}
   {% if messages %}
@@ -33,7 +34,7 @@
           </div>
 				{% endif %}
   {% endif %}
-  
+    <center><img src={% static 'bulky-wiki.svg' %} width="200" height="200"></center>
     <div class="form-group">
       <label for="username">User Name:</label>
       <input type="text" class="form-control" id="email" placeholder="Enter username" name="username">

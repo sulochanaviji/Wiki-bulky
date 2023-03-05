@@ -74,6 +74,9 @@ label img {
   /* box-shadow: 0 0 5px #333; */
   z-index: -1;
 }
+table, th, td {
+  padding: 6px;
+}
 </style>
 <body>
 
@@ -81,10 +84,10 @@ label img {
   <div class="container-fluid">
     <ul class="nav navbar-nav">
       <li><a href="/home"><span class="glyphicon glyphicon-user"></span>&nbsp;{{username_val}}</a></li>
-      <li class="active"><a href="/home">Home</a></li>
+      <li><a href="/home">Home</a></li>
       <li><a href="/media_download">Media Files Download</a></li>
       <li><a href="/wiki_dict_upload">Wikitionary word add</a></li>
-      <li><a href="/wiki-commons-file-download">Wikimedia Files Download</a></li>
+      <li class="active"><a href="/wiki-commons-file-download">Wikimedia Files Download</a></li>
     </ul>
     <ul class="nav navbar-nav navbar-right">
           <li><a href="/logout">
@@ -96,21 +99,130 @@ label img {
   </div>
 </nav>
 <div class="container">
+<form method="POST">
+               {% csrf_token %}
+  <table>
+  <thead>
+  <th>
+        <div class="input-group">
+
+        <select class="form-control" id="file_types" name="file_types">
+        {% if file_types_val %}
+          <option value={{file_types_val}} selected>{{file_types_val}}</option>
+        {% endif %}
+        {% for i in category_file_type %}
+        <option value={{i}}>{{i}}</option>
+        {% endfor %}
+      </select>
+        </select>
+        <script>
+          $( function() {
+            var availableTags = [
+                {% for val in categories %}
+                    "{{val}}",
+                {% endfor %}
+            ];
+            $( "#search_value" ).autocomplete({
+              source: availableTags
+            });
+          } );
+        </script>
+       </div>
+      
+      </th>
+      <th>
+      <div class="input-group">
+      {% if keyword_val %}
+      <input type="text" class="form-control" id="keyword" name="keyword" value ={{keyword_val}} >
+      {% else %}
+      <input type="text" class="form-control" id="keyword" name="keyword" >
+      {% endif %}
+      </div>
+      </th>
+      <th>
+      <div class="input-group">
+      <input type="number" class="form-control" name='limit' id='limit' value={{limit}} />
+      </div>
+      </th>
+      <th>
+       <div class="input-group-btn">
+      <button type="submit" name="search" value="search" class="form-control">
+      <i class="glyphicon glyphicon-search"></i>&nbsp;&nbsp;Search
+      </button>
+      </div>
+      </th>
+      </thead>
+      </table>
+      {% if messages %}
+      
+      <div class="alert alert-success" role="alert">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+      </button>
+      {% for message in messages %}
+      {{ message }}
+      {% endfor %}
+      </div>
+      {% endif %}
+      
+    
+      
+      <table class="table table-bordered">
+      <thead>
+      <tr>
+      <input type="hidden" value=1 name='flag' />
+      
+      <th>
+      
+      Files Count:{{files_count}}
+      
+      </th>
+      <th><button type="submit" name="download" class="btn btn-info">Bulk Download</button>
+      </th>
+      </tr>
+      </thead>
+      <tbody>
+      
+      {% for img in img_links %}
+      
+      {% if file_types_val != 'bitmap|drawing' %}
+      <tr>
+      <td>{{img | safe}}</td>
+      <td><div class="checkbox">
+      <label><input type="checkbox" value={{img.url}} name="file_name[]"></label>
+      </div></td>
+      </tr>
+      {% endif %}
+      
+      {% endfor %}
+      
+      
+      </tbody>
+      </table>
     <div class="row imagetiles">
-        {% for img in img_links %}
+        {% for i in img_val_list %}
         
-        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-6">
+          {% if file_types_val == 'bitmap|drawing' %}
+        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-3">
+        
             <ul>
+                <label><input type="checkbox" value={{i}} name="file_name[]"></label>
                 <li>
-                    <input type="checkbox" id="myCheckbox" />
-                    <label for="myCheckbox" ><img src={{img}} /></label>
+                  <img src={{i}} width="200" height="200">
+
+                  
                 </li>
             </ul>
             
         </div>
+        {% endif %}
         {% endfor %}
+        
+        
+        
     </div>
 </div>
 <table>
+</form>
 </body>
 </html>

@@ -36,7 +36,7 @@ from datetime import datetime
 
 url = config.url
 response_url = url+"/wiki/"
-URL = url
+URL = "https://en.wikipedia.org/w/api.php"
 data_file = config.csv_file
 
 
@@ -110,6 +110,7 @@ def home(request):
 # Fetching all file names in particular category
 
 def fetch_all_file_names_in_category(next_offset, category):
+    
     category = config.category + str(category)
     file_names = []
     ses = requests.Session()
@@ -192,14 +193,15 @@ async def save_downloaded_file(session, dl, index, total_links_count,category=""
 # Task to Start getting download links then download files from download links
 download_links = []
 
-async def fetch_download_links_and_download_file(final_files_list,category):
+async def fetch_download_links_and_download_file(final_files_list,category,file_type=''):
     print_line()
     async with aiohttp.ClientSession() as session:
         tasks = []
         print("Fetching download links....")
-        new_final_files_list = []
         for index, f in enumerate(final_files_list):
+            print(f,"Fffffff")
             task = asyncio.ensure_future(get_file_download_link(session, f))
+            
             tasks.append(task)
 			
         temp_download_links = await asyncio.gather(*tasks)
@@ -214,6 +216,7 @@ async def fetch_download_links_and_download_file(final_files_list,category):
 		
 		# create folder if it does not exist
         dest_folder = category.replace(" ", "_")
+        dest_folder = str(dest_folder) +"_"+ str(file_type)
         if not os.path.exists(dest_folder):
             os.makedirs(dest_folder)
 		
@@ -221,7 +224,6 @@ async def fetch_download_links_and_download_file(final_files_list,category):
         print("Please wait %s files are Downloading...." % (str(total_links_count))) 
         download_tasks = []
         for index, dl in enumerate(download_links):
-            print(download_links,"jhfbjbhbbhbfh")
             download_task = asyncio.ensure_future(save_downloaded_file(session, dl, index, total_links_count,category))
             download_tasks.append(download_task)
         download_files = await asyncio.gather(*download_tasks)
@@ -245,19 +247,24 @@ def wiki_login(username, password):
         'format':"json"
     } 
     #print(ses)
+    print(URL)
     R = ses.get(url=URL, params=PARAMS_0, verify=False)
     DATA = R.json()
-    print(DATA,"Login token data")
+    #print(DATA,"Login token data")
     LOGIN_TOKEN = DATA['query']['tokens']['logintoken']
+    print(LOGIN_TOKEN)
+    
     PARAMS_1 = {
-        'action':"clientlogin",
-        'lgname': username,
-        'lgpassword': password,
-        'lgtoken':LOGIN_TOKEN,
-        'format':"json"
+        "action": "clientlogin",
+        "username": "keerthichandran",
+        "password": "Keerthi4019$",
+        "loginreturnurl": 'https://ta.wiktionary.org/',
+        "logintoken": LOGIN_TOKEN,
+        "format": "json"
     }
+    print(URL)
     R = ses.post(URL, data=PARAMS_1, verify=False)
-
+    print(R.json(),"Login")
     PARAMS_2 = {
         'action':"query",
         'meta':"tokens",
@@ -333,6 +340,7 @@ def user_logout(request):
 
 @login_required(login_url='/login/')
 def media_download(request):
+    category_file_type = ['audio','video']
     if request.method == 'POST':
         page = request.GET.get('page', 1)
         if 'search' in request.POST or request.POST.get('search_value'):
@@ -351,6 +359,7 @@ def media_download(request):
             messages.success(request, 'Files downloaded successfully!', extra_tags='alert')
     else:
         category = "CHECK"
+        file_types = "image"
     
 
 	# Setting base params
@@ -395,7 +404,7 @@ def media_download(request):
             c=i['title'].split()
             cat_list.append(c[-1])
     username_val  = request.session['username']
-    return render(request, 'media_download.html', {'d': d,'count': count, 'search': category,'final_list':final_files_list,'categories':cat_list,'username_val':username_val})
+    return render(request, 'media_download.html', {'d': d,'count': count, 'search': category,'final_list':final_files_list,'categories':cat_list,'username_val':username_val,'category_file_type':category_file_type})
 
 @login_required(login_url='/login/')
 def wiki_dict_upload(request):
@@ -438,8 +447,135 @@ def wiki_dict_upload(request):
 
 def wiki_commons_file_download(request):
     username_val  = request.session['username']
-    img_values = ['https://upload.wikimedia.org/wikipedia/commons/5/52/Belford_Hospital_-_geograph.org.uk_-_2367656.jpg','https://upload.wikimedia.org/wikipedia/commons/a/ab/Calvary_Hospital_at_Hutt_Street%2C_cnr_Wakefield_Street%2C_Adelaide.jpg','https://upload.wikimedia.org/wikipedia/commons/a/ae/Children%27s_Hospital_of_Winnipeg_Complex.jpg','https://upload.wikimedia.org/wikipedia/commons/f/f6/Eidsvold_Hospital%2C_2014.jpg']
-    for i in range(len(img_values)):
-         print(i)
-    return render(request, 'wiki_commons_file_download.html',{'username_val':username_val,'img_links':img_values})
+    img_list = []
+    img_values = []
+    filetype_val = ''
+    filetype = ''
+    keyword = ""
+    limit = "5"
     
+    category_file_type = ['bitmap|drawing','Audio','Video']
+    if request.method == 'POST':
+        if 'search' in request.POST or request.POST.get('file_types'):
+            #print(request.POST.get('file_types'))
+            keyword = request.POST.get('keyword')
+            filetype_val = request.POST.get('file_types')
+            limit = request.POST.get('limit')
+            request.session['filetype_val'] = filetype_val
+            request.session['keyword'] = keyword
+            request.session['limit'] = limit
+        if 'download' in request.POST:
+            #print(request.POST.get('file_types'))
+            keyword = request.POST.get('keyword')
+            filetype_val = request.POST.get('file_types')
+            request.session['filetype_val'] = filetype_val
+            request.session['keyword'] = keyword
+            flag = 1
+            final_files_list = request.POST.getlist('final_list[]')
+            if request.POST.getlist('file_name[]'):
+                final_files_list = request.POST.getlist('file_name[]')
+            else:
+                final_files_list=final_files_list
+            final_files_list_vals = []
+            for i in final_files_list:
+                i=i.split("/")
+                
+                final_files_list_vals.append(str(i[-1]))
+            print(final_files_list_vals,"################")
+            asyncio.run(fetch_download_links_and_download_file(final_files_list_vals,keyword,request.session['filetype_val']))
+            messages.success(request, 'Files downloaded successfully!', extra_tags='alert')
+    else:
+        filetype_val = 'bitmap|drawing'
+        filetype = 'Image'
+        keyword = ""
+        request.session['filetype_val'] = filetype_val
+        request.session['keyword'] = keyword
+
+    
+      
+    gsrsearch_txt = "filetype:"
+    if(str(filetype_val).lower() == "audio"):
+        gsrsearch =  gsrsearch_txt+str(filetype_val).lower()+" "+str(keyword)
+    else:
+        gsrsearch =  gsrsearch_txt+str(filetype_val).lower()+" -fileres:0 "+str(keyword)
+    #print(gsrsearch)
+    
+    PARAMS = {
+    "action": "query",
+    "format": "json",
+    "uselang": "en",
+    "generator": "search",
+    "gsrsearch": gsrsearch,
+    "gsrlimit": str(limit),
+    "gsroffset": "0",
+    "gsrinfo": "totalhits|suggestion",
+    "gsrprop": "size|wordcount|timestamp|snippet",
+    "prop": "info|imageinfo|entityterms",
+    "inprop": "url",
+    "gsrnamespace": "6",
+    "iiprop": "url|size|mime",
+    "iiurlheight": "180" ,
+    "wbetterms": "label"
+    }
+
+    R = requests.Session().get(wc_url, params = PARAMS, verify=False)
+    #response_dict = R.json()
+    DATA = R.json()
+    
+    if DATA["query"]["pages"] != '':
+        itemlist = DATA["query"]["pages"]
+    else:
+        print("no data found")
+    
+    reponse_list = []
+    
+    img_values = []
+    for item in itemlist.values():
+        reponse_obj = {} 
+        reponse_obj['thumbUrl']= item["imageinfo"][0]["thumburl"],
+        reponse_obj['url'] = item["imageinfo"][0]["url"]
+        
+        reponse_list.append(reponse_obj)
+    if filetype_val == 'bitmap|drawing':
+        for img_url in reponse_list:
+            img_urls_links = {}
+            img_val = img_url['thumbUrl'][0]
+            
+            img_values.append(img_val)
+    else:
+        for img_url in reponse_list:
+            img_val = img_url['url']
+            
+            img_values.append(img_val)
+
+    img_val_list = []
+    for i in range(len(img_values)):
+        
+        #print(img_values[i]['thumbUrl'],"********")
+        if filetype_val == 'bitmap|drawing':
+            img_txt1 = "<input type='checkbox' id='myCheckbox"+str(i)+" value={{img}}/> "
+            img_txt2 = "<label for='myCheckbox"+ str(i) + "'>"+"<img src='" + str(img_values[i]) + "'/></label>"
+            final_img_txt = img_txt1+img_txt2
+            img_val_list.append(img_values[i])
+            img_list.append(final_img_txt)
+        elif filetype_val == 'audio':
+            img_txt1 = ""
+            img_txt2 = "<audio controls>" + "<source src='"+ str(img_values[i]) +"' type='audio/ogg'></audio>"
+            final_img_txt = img_txt1+img_txt2
+            img_val_list.append(str(img_values[i]))
+            img_list.append(final_img_txt)
+        else:
+            img_txt1 = ""
+            img_txt2 = "<video width='320' height='240' controls>" + "<source src='"+ str(img_values[i]) +"' type='audio/ogg'></video>"
+            final_img_txt = img_txt1+img_txt2
+            img_val_list.append(img_values[i])
+            img_list.append(final_img_txt)
+
+
+    # d,count=fetch_all_file_names_in_common(next_offset,filetype_val,keyword)
+    # print(d,count)
+  
+    print(img_val_list)
+    return render(request, 'wiki_commons_file_download.html',{'username_val':username_val,'img_links':img_list,'category_file_type':category_file_type,'file_types':filetype,'file_types_val':request.session['filetype_val'],'keyword_val':request.session['keyword'],'img_val_list':img_val_list,"files_count":len(img_val_list),"limit":limit})
+
+
