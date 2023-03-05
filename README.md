@@ -30,7 +30,7 @@
   ~$ python3 manage.py makemigrations
   ~$ python3 manage.py migrate
  ```
-5. ###Run the Django Server
+5. ### Run the Django Server
   ~ python3 manage.py runserver
   
 
