@@ -477,12 +477,15 @@ def wiki_commons_file_download(request):
             else:
                 final_files_list=final_files_list
             final_files_list_vals = []
+            headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+            dest_folder = str(keyword) +"_"+ str(filetype_val)
+            if not os.path.exists(dest_folder):
+                os.makedirs(dest_folder)
             for i in final_files_list:
-                i=i.split("/")
-                
-                final_files_list_vals.append(str(i[-1]))
-            print(final_files_list_vals,"################")
-            asyncio.run(fetch_download_links_and_download_file(final_files_list_vals,keyword,request.session['filetype_val']))
+            	response = requests.get(i, headers=headers)
+            	filename = os.path.join(dest_folder, os.path.basename(i))
+            	with open(filename, "wb") as f:
+            	    f.write(response.content)
             messages.success(request, 'Files downloaded successfully!', extra_tags='alert')
     else:
         filetype_val = 'bitmap|drawing'
@@ -551,25 +554,32 @@ def wiki_commons_file_download(request):
     img_val_list = []
     for i in range(len(img_values)):
         
+        img_val_obj = {}
         #print(img_values[i]['thumbUrl'],"********")
         if filetype_val == 'bitmap|drawing':
             img_txt1 = "<input type='checkbox' id='myCheckbox"+str(i)+" value={{img}}/> "
             img_txt2 = "<label for='myCheckbox"+ str(i) + "'>"+"<img src='" + str(img_values[i]) + "'/></label>"
             final_img_txt = img_txt1+img_txt2
             img_val_list.append(img_values[i])
-            img_list.append(final_img_txt)
+            img_val_obj['final_img_text'] = final_img_txt,
+            img_val_obj['image_url'] = img_values[i]
+            img_list.append(img_val_obj)
         elif filetype_val == 'audio':
             img_txt1 = ""
             img_txt2 = "<audio controls>" + "<source src='"+ str(img_values[i]) +"' type='audio/ogg'></audio>"
             final_img_txt = img_txt1+img_txt2
             img_val_list.append(str(img_values[i]))
-            img_list.append(final_img_txt)
+            img_val_obj['final_img_text'] = final_img_txt,
+            img_val_obj['image_url'] = img_values[i]
+            img_list.append(img_val_obj)
         else:
             img_txt1 = ""
             img_txt2 = "<video width='320' height='240' controls>" + "<source src='"+ str(img_values[i]) +"' type='audio/ogg'></video>"
             final_img_txt = img_txt1+img_txt2
             img_val_list.append(img_values[i])
-            img_list.append(final_img_txt)
+            img_val_obj['final_img_text'] = final_img_txt,
+            img_val_obj['image_url'] = img_values[i]
+            img_list.append(img_val_obj)
 
 
     # d,count=fetch_all_file_names_in_common(next_offset,filetype_val,keyword)
