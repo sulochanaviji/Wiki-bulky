@@ -101,6 +101,11 @@ table, th, td {
 <div class="container">
 <form method="POST">
                {% csrf_token %}
+  <div class="container" style="width: 0;height: 0px;">
+      {% for i in img_val_list %}
+      <input type="checkbox" value={{i}} name="final_list[]" id="final_list" checked style="opacity: 0;"></label> <!--style="opacity: 0;"-->
+      {% endfor %}
+  </div>
   <table>
   <thead>
   <th>
@@ -187,9 +192,9 @@ table, th, td {
       
       {% if file_types_val != 'bitmap|drawing' %}
       <tr>
-      <td>{{img | safe}}</td>
+      <td>{{img.final_img_text | safe}}</td>
       <td><div class="checkbox">
-      <label><input type="checkbox" value={{img.url}} name="file_name[]"></label>
+      <label><input type="checkbox" value={{img.image_url}} name="file_name[]"></label>
       </div></td>
       </tr>
       {% endif %}
