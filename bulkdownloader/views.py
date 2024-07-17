@@ -152,22 +152,44 @@ def fetch_all_file_names_in_category(next_offset, category):
 
 # Getting download url from commons html page
 
-async def get_file_download_link(session, file_name):
-	url = "https://commons.wikimedia.org/wiki/"+file_name
-	try:		
-		async with session.get(url,ssl=False) as response:
-			html_body = await response.read()
-			soup = BeautifulSoup(html_body, "html.parser")
-			media = soup.findAll("div", attrs={"class":"fullMedia"})
-			dl = media[0].find('a').get("href")
-			f_dl = urllib.parse.unquote(dl)
-			# print(file_name + " => " + f_dl)
-			return f_dl
+async def get_file_download_link(session, file_name,flag=''):
+    # https://upload.wikimedia.org/wikipedia/commons/8/8b/Campsite_at_Mystic_Beach%2C_Vancouver_Island%2C_Canada.jpg
+    print("Flag==",flag)
+    if flag != '':
+        if file_name:
+            final_file_name = file_name.split("-")[-1].replace("%2C",",")
+            print("F---",final_file_name)
+            # url = "https://commons.wikimedia.org/wiki/File:Campsite_at_Mystic_Beach,_Vancouver_Island,_Canada.jpg"
+            url = "https://commons.wikimedia.org/wiki/File:"+final_file_name
+    else:
 
-	except BaseException as e:
-		print_line()
-		print("An exception occurred " + file_name)
-		print(e)
+        url = "https://commons.wikimedia.org/wiki/"+file_name
+    # print("File name:", file_name)
+    # url = "https://commons.wikimedia.org/wiki/File:Campsite_at_Mystic_Beach,_Vancouver_Island,_Canada.jpg"
+    
+    async with session.get(url,ssl=False) as response:
+            html_body = await response.read()
+            soup = BeautifulSoup(html_body, "html.parser")
+            media = soup.findAll("div", attrs={"class":"fullMedia"})
+            print(media)
+            dl = media[0].find('a').get("href")
+            f_dl = urllib.parse.unquote(dl)
+            print(file_name + " => " + f_dl)
+            return f_dl
+    # try:		
+    #     async with session.get(url,ssl=False) as response:
+    #         html_body = await response.read()
+    #         soup = BeautifulSoup(html_body, "html.parser")
+    #         media = soup.findAll("div", attrs={"class":"fullMedia"})
+    #         dl = media[0].find('a').get("href")
+    #         f_dl = urllib.parse.unquote(dl)
+    #         print(file_name + " => " + f_dl)
+    #         return f_dl
+
+    # except BaseException as e:
+    #     print_line()
+    #     print("An exception occurred " + file_name)
+    #     print(e)
 		
 
 # Download file from commons download link
@@ -177,7 +199,7 @@ async def save_downloaded_file(session, dl, index, total_links_count,category=""
         async with session.get(dl, allow_redirects=True,ssl=False) as audio_request:
             if audio_request.status == 200:
                 d_filename = urllib.parse.unquote(dl).split("/")[-1]
-                # print(str(index+1) + "/" + str(total_links_count) + " => " + d_filename)
+                print(str(index+1) + "/" + str(total_links_count) + " => " + d_filename)
                 dest_folder = category.replace(" ", "_")
                 file_path = os.path.join(dest_folder, d_filename)
                 f = await aiofiles.open(file_path, mode='wb')
@@ -193,14 +215,13 @@ async def save_downloaded_file(session, dl, index, total_links_count,category=""
 # Task to Start getting download links then download files from download links
 download_links = []
 
-async def fetch_download_links_and_download_file(final_files_list,category,file_type=''):
+async def fetch_download_links_and_download_file(final_files_list,category,file_type='',flag=''):
     print_line()
     async with aiohttp.ClientSession() as session:
         tasks = []
         print("Fetching download links....")
         for index, f in enumerate(final_files_list):
-            print(f,"Fffffff")
-            task = asyncio.ensure_future(get_file_download_link(session, f))
+            task = asyncio.ensure_future(get_file_download_link(session, f,flag))
             
             tasks.append(task)
 			
@@ -213,10 +234,14 @@ async def fetch_download_links_and_download_file(final_files_list,category,file_
 		
 		# Start Download Task
 		# Download file from commons download link 
-		
+        print(category)
+        if not category:
+            category = "Sample"
 		# create folder if it does not exist
         dest_folder = category.replace(" ", "_")
-        dest_folder = str(dest_folder) +"_"+ str(file_type)
+        # dest_folder = str(dest_folder) +"_"+ str(file_type)
+        
+        print("DEST Folder",dest_folder)
         if not os.path.exists(dest_folder):
             os.makedirs(dest_folder)
 		
@@ -247,7 +272,7 @@ def wiki_login(username, password):
         'format':"json"
     } 
     #print(ses)
-    print(URL)
+    # print(URL)
     R = ses.get(url=URL, params=PARAMS_0, verify=False)
     DATA = R.json()
     #print(DATA,"Login token data")
@@ -262,7 +287,7 @@ def wiki_login(username, password):
         "logintoken": LOGIN_TOKEN,
         "format": "json"
     }
-    print(URL)
+    # print(URL)
     R = ses.post(URL, data=PARAMS_1, verify=False)
     print(R.json(),"Login")
     PARAMS_2 = {
@@ -273,7 +298,7 @@ def wiki_login(username, password):
     }
     R = ses.get(url=URL, params=PARAMS_2, verify=False)
     DATA = R.json()
-    print(DATA,"CSRF token data")
+    # print(DATA,"CSRF token data")
     CSRF_TOKEN = DATA['query']['tokens']['csrftoken']
     #upload_data_into_wiki(CSRF_TOKEN)
     return CSRF_TOKEN
@@ -338,7 +363,7 @@ def user_logout(request):
 
 
 
-@login_required(login_url='/login/')
+# @login_required(login_url='/login/')
 def media_download(request):
     category_file_type = ['audio','video']
     if request.method == 'POST':
@@ -355,7 +380,8 @@ def media_download(request):
                 final_files_list = request.POST.getlist('file_name[]')
             else:
                 final_files_list=final_files_list
-            asyncio.run(fetch_download_links_and_download_file(final_files_list,category))
+            print("Final list link",final_files_list)
+            asyncio.run(fetch_download_links_and_download_file(final_files_list,category,flag=''))
             messages.success(request, 'Files downloaded successfully!', extra_tags='alert')
     else:
         category = "CHECK"
@@ -368,7 +394,7 @@ def media_download(request):
     #ses = requests.Session()
     d,count=fetch_all_file_names_in_category(next_offset, category)
 
-
+    print("File names:",d)
     filtered_list = []
     for file_name in d:
         if (file_name.startswith("File:")):
@@ -425,11 +451,11 @@ def wiki_dict_upload(request):
                 for row in csvreader:
                     R = ses.get(url=response_url)
                     if R.status_code != "":
-                        print(CSRF_TOKEN, row)
+                        # print(CSRF_TOKEN, row)
                         msg_val = "%s word added into wikitionary" % row[0]
                         print ("%s word added into wikitionary" % row[0])
                         upload_data_into_wiki(CSRF_TOKEN, row)
-                        print(datetime.utcnow())
+                        # print(datetime.utcnow())
                         history_val = history(command = str(msg_val),file_name = str(file_name),type ="Add" ,tool_type ="wikitionary" ,created_on = datetime.utcnow() ,created_by =username)
                         history_val.save()
                         history_val_dict ={
@@ -467,25 +493,31 @@ def wiki_commons_file_download(request):
         if 'download' in request.POST:
             #print(request.POST.get('file_types'))
             keyword = request.POST.get('keyword')
+            filename = request.POST.get('filename')
             filetype_val = request.POST.get('file_types')
             request.session['filetype_val'] = filetype_val
             request.session['keyword'] = keyword
             flag = 1
             final_files_list = request.POST.getlist('final_list[]')
+            final_files_names = request.POST.getlist('filenamelist[]')
+            if request.POST.getlist('filenamelist[]'):
+                final_files_names = request.POST.getlist('filenamelist[]')
+            else:
+                final_files_names=final_files_names
+
+            print("File names list val ", final_files_names)
             if request.POST.getlist('file_name[]'):
                 final_files_list = request.POST.getlist('file_name[]')
             else:
                 final_files_list=final_files_list
             final_files_list_vals = []
-            headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
-            dest_folder = str(keyword) +"_"+ str(filetype_val)
-            if not os.path.exists(dest_folder):
-                os.makedirs(dest_folder)
             for i in final_files_list:
-            	response = requests.get(i, headers=headers)
-            	filename = os.path.join(dest_folder, os.path.basename(i))
-            	with open(filename, "wb") as f:
-            	    f.write(response.content)
+                print("Files names only:",i)
+                i=i.split("/")
+
+                final_files_list_vals.append(str(i[-1]))
+            asyncio.run(fetch_download_links_and_download_file(final_files_list_vals,keyword,request.session['filetype_val'],flag="mediawiki"))
+
             messages.success(request, 'Files downloaded successfully!', extra_tags='alert')
     else:
         filetype_val = 'bitmap|drawing'
@@ -493,9 +525,7 @@ def wiki_commons_file_download(request):
         keyword = ""
         request.session['filetype_val'] = filetype_val
         request.session['keyword'] = keyword
-
-    
-      
+  
     gsrsearch_txt = "filetype:"
     if(str(filetype_val).lower() == "audio"):
         gsrsearch =  gsrsearch_txt+str(filetype_val).lower()+" "+str(keyword)
@@ -525,67 +555,104 @@ def wiki_commons_file_download(request):
     #response_dict = R.json()
     DATA = R.json()
     
+    # print("DATA",DATA["query"]["pages"])
+    # print(DATA["query"]["pages"])
     if DATA["query"]["pages"] != '':
         itemlist = DATA["query"]["pages"]
     else:
         print("no data found")
-    
     reponse_list = []
-    
+    # print(img_list)
     img_values = []
     for item in itemlist.values():
         reponse_obj = {} 
-        reponse_obj['thumbUrl']= item["imageinfo"][0]["thumburl"],
+        reponse_obj['Title'] = str(item['title']).split(":")[1]
+        reponse_obj['img_license'] = item['snippet']
+        reponse_obj['thumbUrl']= item["imageinfo"][0]["thumburl"]
         reponse_obj['url'] = item["imageinfo"][0]["url"]
         
         reponse_list.append(reponse_obj)
+
+    
+    image_details_dict = {}
     if filetype_val == 'bitmap|drawing':
         for img_url in reponse_list:
-            img_urls_links = {}
-            img_val = img_url['thumbUrl'][0]
-            
-            img_values.append(img_val)
+            image_details_dict = {}
+            # img_val = img_url['thumbUrl'][0]
+            # titles = img_url['Title']
+            image_details_dict['img_url'] = img_url['thumbUrl']
+            image_details_dict['img_name'] = img_url['Title']
+            image_details_dict['img_license'] = img_url['img_license']
+            img_values.append(image_details_dict)
     else:
         for img_url in reponse_list:
-            img_val = img_url['url']
-            
-            img_values.append(img_val)
+            image_details_dict = {}
+            # img_val = img_url['url']
+            # titles = img_url['Title']
+            image_details_dict['img_url'] = img_url['url']
+            image_details_dict['img_name'] = img_url['Title']
+            image_details_dict['img_license'] = img_url['img_license']
+            img_values.append(image_details_dict)
 
     img_val_list = []
+    # print(img_values)
     for i in range(len(img_values)):
-        
+        # print(img_values[i]['img_url'])
         img_val_obj = {}
-        #print(img_values[i]['thumbUrl'],"********")
         if filetype_val == 'bitmap|drawing':
+            
             img_txt1 = "<input type='checkbox' id='myCheckbox"+str(i)+" value={{img}}/> "
-            img_txt2 = "<label for='myCheckbox"+ str(i) + "'>"+"<img src='" + str(img_values[i]) + "'/></label>"
+            img_txt2 = "<label for='myCheckbox"+ str(i) + "'>"+"<img src='" + img_values[i]['img_url'] + "'/></label>"
             final_img_txt = img_txt1+img_txt2
-            img_val_list.append(img_values[i])
-            img_val_obj['final_img_text'] = final_img_txt,
-            img_val_obj['image_url'] = img_values[i]
+            img_val_list.append(str(img_values[i]['img_url']))
+            # img_list.append(final_img_txt)
+            # img_val_list.append(img_values[i])
+
+            img_val_obj['final_img_text'] = str(final_img_txt)
+            img_val_obj['image_url'] = img_values[i]['img_url']
+            img_val_obj['img_name'] = img_values[i]['img_name']
+            img_val_obj['img_license'] = img_values[i]['img_license']
             img_list.append(img_val_obj)
+
         elif filetype_val == 'audio':
+            
             img_txt1 = ""
-            img_txt2 = "<audio controls>" + "<source src='"+ str(img_values[i]) +"' type='audio/ogg'></audio>"
+            img_txt2 = "<audio controls>" + "<source src='"+ img_values[i]['img_url'] +"' type='audio/ogg'></audio>"
             final_img_txt = img_txt1+img_txt2
-            img_val_list.append(str(img_values[i]))
-            img_val_obj['final_img_text'] = final_img_txt,
-            img_val_obj['image_url'] = img_values[i]
+            img_val_list.append(str(img_values[i]['img_url']))
+            # img_list.append(final_img_txt)
+            img_val_obj['final_img_text'] = str(final_img_txt)
+            img_val_obj['image_url'] = img_values[i]['img_url']
+            img_val_obj['img_name'] = img_values[i]['img_name']
+            img_val_obj['img_license'] = img_values[i]['img_license']
             img_list.append(img_val_obj)
         else:
             img_txt1 = ""
-            img_txt2 = "<video width='320' height='240' controls>" + "<source src='"+ str(img_values[i]) +"' type='audio/ogg'></video>"
+            img_txt2 = "<video width='320' height='240' controls>" + "<source src='"+ img_values[i]['img_url'] +"' type='audio/ogg'></video>"
             final_img_txt = img_txt1+img_txt2
-            img_val_list.append(img_values[i])
-            img_val_obj['final_img_text'] = final_img_txt,
-            img_val_obj['image_url'] = img_values[i]
+            img_val_list.append(str(img_values[i]['img_url']))
+            # img_list.append(final_img_txt)
+            img_val_obj['final_img_text'] = str(final_img_txt)
+            img_val_obj['image_url'] = img_values[i]['img_url']
+            img_val_obj['img_name'] = img_values[i]['img_name']
+            img_val_obj['img_license'] = img_values[i]['img_license']
             img_list.append(img_val_obj)
 
 
     # d,count=fetch_all_file_names_in_common(next_offset,filetype_val,keyword)
     # print(d,count)
   
-    print(img_val_list)
-    return render(request, 'wiki_commons_file_download.html',{'username_val':username_val,'img_links':img_list,'category_file_type':category_file_type,'file_types':filetype,'file_types_val':request.session['filetype_val'],'keyword_val':request.session['keyword'],'img_val_list':img_val_list,"files_count":len(img_val_list),"limit":limit})
+    # print(img_val_list)
+    d = ''
+    page = request.GET.get('page', 1)
+    paginator = Paginator(d, 10)
+    try:
+        d = paginator.page(page)
+    except PageNotAnInteger:
+        d = paginator.page(1)
+    except EmptyPage:
+        d = paginator.page(paginator.num_pages)
+
+    return render(request, 'wiki_commons_file_download.html',{'username_val':username_val,'img_links':img_list,'category_file_type':category_file_type,'file_types':filetype,'file_types_val':request.session['filetype_val'],'keyword_val':request.session['keyword'],'img_val_list':img_val_list,"files_count":len(img_val_list),"limit":limit,'d':d})
 
 

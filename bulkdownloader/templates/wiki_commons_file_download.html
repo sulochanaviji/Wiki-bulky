@@ -118,9 +118,9 @@ table, th, td {
         {% for i in category_file_type %}
         <option value={{i}}>{{i}}</option>
         {% endfor %}
-      </select>
         </select>
-        <script>
+        </select>
+        <!--<script>
           $( function() {
             var availableTags = [
                 {% for val in categories %}
@@ -131,7 +131,7 @@ table, th, td {
               source: availableTags
             });
           } );
-        </script>
+        </script>!-->
        </div>
       
       </th>
@@ -189,45 +189,27 @@ table, th, td {
       <tbody>
       
       {% for img in img_links %}
-      
-      {% if file_types_val != 'bitmap|drawing' %}
+      <input type="hidden" name='filenamelist[]' id='filenamelist' value={{img.img_name}} />
       <tr>
-      <td>{{img.final_img_text | safe}}</td>
+
+      <td>{{img.final_img_text | safe}}<br>
+        {{img.img_name}}<br><br>
+        {{img.img_license}}
+      </td>
       <td><div class="checkbox">
       <label><input type="checkbox" value={{img.image_url}} name="file_name[]"></label>
       </div></td>
       </tr>
-      {% endif %}
       
       {% endfor %}
       
       
       </tbody>
       </table>
-    <div class="row imagetiles">
-        {% for i in img_val_list %}
-        
-          {% if file_types_val == 'bitmap|drawing' %}
-        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-3">
-        
-            <ul>
-                <label><input type="checkbox" value={{i}} name="file_name[]"></label>
-                <li>
-                  <img src={{i}} width="200" height="200">
-
-                  
-                </li>
-            </ul>
-            
-        </div>
-        {% endif %}
-        {% endfor %}
-        
-        
-        
+      
+    
     </div>
 </div>
-<table>
 </form>
 </body>
 </html>
